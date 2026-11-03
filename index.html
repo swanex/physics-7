@@ -1055,9 +1055,10 @@
         `<div class="flex items-center flex-wrap gap-1 text-base sm:text-lg leading-snug">
           <span class="font-bold text-slate-500 mr-1">5)</span>
           <span class="font-semibold text-blue-950">
-            ε = <span class="fraction"><span class="fraction-top">Δa</span><span class="fraction-bottom">a</span></span> · 100% = 
-            <span class="fraction"><span class="fraction-top">${fmtNum(delta)} (${unit})</span><span class="fraction-bottom">${fmtNum(absA)} (${unit})</span></span> · 100% ≈ ${fmtNum(eps1)}% (или ≈ ${epsInt}%)
+            ε = <span class="fraction"><span class="fraction-top">Δa</span><span class="fraction-bottom">${task.a < 0 ? '|a|' : 'a'}</span></span> · 100% = 
+            <span class="fraction"><span class="fraction-top">${fmtNum(delta)} (${unit})</span><span class="fraction-bottom">${task.a < 0 ? `|${fmtNum(a)}|` : fmtNum(absA)} (${unit})</span></span> · 100%${task.a < 0 ? ` = <span class="fraction"><span class="fraction-top">${fmtNum(delta)}</span><span class="fraction-bottom">${fmtNum(absA)}</span></span> · 100%` : ''} ≈ ${fmtNum(eps1)}% (или ≈ ${epsInt}%)
           </span>
+          ${task.a < 0 ? `<div class="w-full text-xs text-blue-900/80 italic mt-0.5 ml-5">📌 (Погрешность в физике всегда > 0, поэтому отрицательное значение температуры берётся по модулю: |${fmtNum(a)}| = ${fmtNum(absA)})</div>` : ''}
         </div>`
       ];
 
@@ -1133,7 +1134,7 @@
         <p>1. <b>Цена деления (ц.д.):</b> На шкале берём соседние подписанные числа <b>${fmtNum(v1)} ${unit}</b> и <b>${fmtNum(v2)} ${unit}</b>. Разница между ними равна <b>${fmtNum(v2)} − ${v1 < 0 ? `(${fmtNum(v1)})` : fmtNum(v1)} = ${fmtNum(diff)} ${unit}</b>. Делим эту разницу на <b>${divs} делений</b>: получаем <b>${fmtNum(cd)} ${unit}</b> в одном маленьком делении.</p>
         <p>2. <b>Инструментальная погрешность (Δ):</b> Делим цену деления пополам: <b>${fmtNum(cd)} : 2 = ${fmtNum(delta)} ${unit}</b>.</p>
         <p>3. <b>Измеренная величина (a) и запись истинного значения (A):</b> От отметки <b>${fmtNum(base)} ${unit}</b> отсчитываем <b>${ticks} делений</b> по <b>${fmtNum(cd)} ${unit}</b> каждое: <b>${fmtNum(base)} + ${ticks} · ${fmtNum(cd)} = ${fmtNum(a)} ${unit}</b>. Записываем в виде интервала: <b>A = (${fmtNum(a)} ± ${fmtNum(delta)}) ${unit}</b> (складывать и вычитать числа внутри скобки НЕ нужно!).</p>
-        <p>4. <b>Относительная погрешность (ε):</b> Делим погрешность <b>${fmtNum(delta)}</b> на измеренное значение <b>${fmtNum(absA)}</b> и умножаем на 100%: получается <b>≈ ${fmtNum(eps1)}%</b> (учитель также разрешает округлять до целых: <b>≈ ${epsInt}%</b>).</p>
+        <p>4. <b>Относительная погрешность (ε):</b> ${task.a < 0 ? `Так как измеренная температура отрицательная (<b>${fmtNum(a)} ${unit}</b>), а погрешность в физике принципиально <b>всегда положительна</b>, в формуле берётся модуль величины: <b>|${fmtNum(a)}| = ${fmtNum(absA)}</b>. ` : ''}Делим погрешность <b>${fmtNum(delta)}</b> на ${task.a < 0 ? `модуль числа <b>${fmtNum(absA)}</b>` : `измеренное значение <b>${fmtNum(absA)}</b>`} и умножаем на 100%: получается <b>≈ ${fmtNum(eps1)}%</b> (учитель также разрешает округлять до целых: <b>≈ ${epsInt}%</b>).</p>
       `;
     }
 
@@ -1316,6 +1317,12 @@
       document.querySelectorAll('.unit-label').forEach(el => {
         el.textContent = task.unit;
       });
+
+      // Dynamic placeholder for eps field
+      const inpEpsEl = document.getElementById('inp-eps');
+      if (inpEpsEl) {
+        inpEpsEl.placeholder = task.a < 0 ? '(Δa : |a|) · 100%' : '(Δa : a) · 100%';
+      }
 
       // Checkbox state (enabled only after all 4 answers in Step 1 are solved)
       const chk = document.getElementById('chk-task-done');
@@ -1502,7 +1509,7 @@
           { id: 'hint-cd', text: `Формула: (${fmtNum(task.v2)} − ${v1Str}) : ${task.divs} дел. = ?` },
           { id: 'hint-delta', text: `Подели найденную цену деления (ц.д.) на 2` },
           { id: 'hint-a', text: `К числу ${fmtNum(task.base)} прибавь (${task.ticks} дел. × ц.д.)` },
-          { id: 'hint-eps', text: `Подели погрешность Δ на измеренное число a и умножь на 100` }
+          { id: 'hint-eps', text: task.a < 0 ? `Погрешность в физике всегда > 0! Подели погрешность Δ на модуль числа |a| (без знака минус, то есть на ${fmtNum(task.absA)}) и умножь на 100` : `Подели погрешность Δ на измеренное число a и умножь на 100` }
         ];
         hints.forEach(h => {
           const el = document.getElementById(h.id);
@@ -1533,6 +1540,7 @@
         const okDelta = !isNaN(uDelta) && Math.abs(uDelta - task.delta) < 0.01;
         const okA = !isNaN(uA) && Math.abs(uA - task.a) < 0.01;
         const okEps = !isNaN(uEps) && (Math.abs(uEps - task.eps1) <= 0.25 || Math.abs(uEps - task.epsInt) <= 0.6);
+        const enteredNegativeEps = !okEps && !isNaN(uEps) && (Math.abs(Math.abs(uEps) - task.eps1) <= 0.25 || Math.abs(Math.abs(uEps) - task.epsInt) <= 0.6) && uEps < 0;
 
         if (okCd) prog.cd = true;
         if (okDelta) prog.delta = true;
@@ -1540,12 +1548,15 @@
         if (okEps) prog.eps = true;
         saveSolvedSteps();
 
-        const setFieldUI = (boxId, stId, isOk, hasInput) => {
+        const setFieldUI = (boxId, stId, isOk, hasInput, isNegativeEps = false) => {
           const box = document.getElementById(boxId);
           const st = document.getElementById(stId);
           if (isOk) {
             box.className = 'bg-emerald-50/80 p-3 rounded-xl border-2 border-emerald-400 transition-all';
             st.innerHTML = '<span class="text-emerald-700 font-extrabold">✓ Верно! Открыто</span>';
+          } else if (isNegativeEps) {
+            box.className = 'bg-amber-50 p-3 rounded-xl border-2 border-amber-400 transition-all';
+            st.innerHTML = '<span class="text-amber-800 font-bold">⚠️ Убери «−» (погрешность > 0)</span>';
           } else if (hasInput) {
             box.className = 'bg-rose-50/70 p-3 rounded-xl border-2 border-rose-300 transition-all';
             st.innerHTML = '<span class="text-rose-600 font-bold">✗ Ошибка в расчёте</span>';
@@ -1555,10 +1566,18 @@
           }
         };
 
-        setFieldUI('box-cd', 'status-cd', prog.cd, !isNaN(uCd));
-        setFieldUI('box-delta', 'status-delta', prog.delta, !isNaN(uDelta));
-        setFieldUI('box-a', 'status-a', prog.a, !isNaN(uA));
-        setFieldUI('box-eps', 'status-eps', prog.eps, !isNaN(uEps));
+        setFieldUI('box-cd', 'status-cd', prog.cd, !isNaN(uCd), false);
+        setFieldUI('box-delta', 'status-delta', prog.delta, !isNaN(uDelta), false);
+        setFieldUI('box-a', 'status-a', prog.a, !isNaN(uA), false);
+        setFieldUI('box-eps', 'status-eps', prog.eps, !isNaN(uEps), enteredNegativeEps);
+
+        if (enteredNegativeEps) {
+          const hEps = document.getElementById('hint-eps');
+          if (hEps) {
+            hEps.innerHTML = `⚠️ <b>Погрешность не может быть отрицательной!</b> В физике погрешность всегда положительна: делим на модуль <b>|${fmtNum(task.a)}| = ${fmtNum(task.absA)}</b>. Убери минус: введи положительное число <b>${fmtNum(task.eps1)}</b> (или <b>${task.epsInt}</b>).`;
+            hEps.classList.remove('hidden');
+          }
+        }
 
         const fb = document.getElementById('trainer-feedback');
         const badge = document.getElementById('trainer-lock-badge');
